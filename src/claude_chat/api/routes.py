@@ -1,4 +1,5 @@
-from fastapi import APIRouter
+from fastapi import APIRouter, HTTPException
+from anthropic import BadRequestError, APIConnectionError
 from pydantic import BaseModel
 from ..client import ClaudeClient
 from ..models import ChatHistory
@@ -6,7 +7,6 @@ from ..models import ChatHistory
 router = APIRouter()
 client = ClaudeClient()
 
-# Request/Response схемы
 class ChatRequest(BaseModel):
     message: str
     history: list[dict] = []
@@ -21,21 +21,22 @@ async def health():
 
 @router.post("/chat")
 async def chat(request: ChatRequest) -> ChatResponse:
-    # Восстанавливаем историю из запроса
-    history = ChatHistory()
-    for msg in request.history:
-        history.add(msg["role"], msg["content"])
+    try:
+        history = ChatHistory()
+        for msg in request.history:
+            history.add(msg["role"], msg["content"])
 
-    # Добавляем новое сообщение
-    history.add("user", request.message)
+        history.add("user", request.message)
+        response = client.send(history)
+        history.add("assistant", response)
 
-    # Получаем ответ от Claude
-    response = client.send(history)
-
-    # Добавляем ответ в историю
-    history.add("assistant", response)
-
-    return ChatResponse(
-        response=response,
-        history=history.to_api_format()
-    )
+        return ChatResponse(
+            response=response,
+            history=history.to_api_format()
+        )
+    except BadRequestError as e:
+        raise HTTPException(status_code=402, detail="Insufficient API credits")
+    except APIConnectionError as e:
+        raise HTTPException(status_code=502, detail="Cannot reach Anthropic API")
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
