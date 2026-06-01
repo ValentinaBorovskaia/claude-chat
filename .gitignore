@@ -1,0 +1,23 @@
+# Секреты — никогда не коммитим!
+.env
+
+# Виртуальное окружение uv
+.venv/
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+.pytest_cache/
+
+# VS Code
+.vscode/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Build artifacts
+*.egg-info/
+dist/
+build/
