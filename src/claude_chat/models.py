@@ -1,9 +1,9 @@
-from pydantic import BaseModel
+from pydantic import BaseModel, Field, field_validator
 from typing import Literal
 
 class Message(BaseModel):
     role: Literal["user", "assistant"]
-    content: str
+    content: str = Field(min_length=1)
 
 class ChatHistory(BaseModel):
     messages: list[Message] = []

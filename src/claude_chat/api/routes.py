@@ -1,19 +1,28 @@
 from fastapi import APIRouter, HTTPException
 from anthropic import BadRequestError, APIConnectionError
-from pydantic import BaseModel
+from pydantic import BaseModel, Field, field_validator
 from ..client import ClaudeClient
 from ..models import ChatHistory
 
-router = APIRouter()
-client = ClaudeClient()
-
 class ChatRequest(BaseModel):
-    message: str
-    history: list[dict] = []
+    message: str = Field(min_length=1, max_length=10000)
+    history: list[dict] = Field(default=[], max_length=100)
+    temperature: float = Field(default=0.7, ge=0.0, le=1.0)
+
+    @field_validator("message")
+    @classmethod
+    def message_strip(cls, v: str) -> str:
+        stripped = v.strip()
+        if not stripped:
+            raise ValueError("Message cannot be empty or whitespace")
+        return stripped
 
 class ChatResponse(BaseModel):
     response: str
     history: list[dict]
+
+router = APIRouter()
+client = ClaudeClient()
 
 @router.get("/health")
 async def health():
